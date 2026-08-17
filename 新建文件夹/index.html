@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡布西游伤害计算器V2.5</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        :root {
+            --main-blue: #4294DC;
+            --light-blue: #E4F4F8;
+            --white: #ffffff;
+            --gray: #f5f5f5;
+            --border: #dcdfe6;
+            --text-main: #303133;
+            --text-secondary: #606266;
+            --success: #67c23a;
+            --warning: #e6a23c;
+            --danger: #f56c6c;
+        }
+        body {
+            background-color: var(--light-blue);
+            color: var(--text-main);
+            padding: 10px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            background: var(--main-blue);
+            color: var(--white);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .header .sub-header {
+            font-size: 14px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+        }
+        .tabs {
+            display: flex;
+            background: var(--white);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 12px 0;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-item.active {
+            color: var(--main-blue);
+            border-bottom: 3px solid var(--main-blue);
+            background: var(--light-blue);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .container {
+            display: block;
+            margin-bottom: 15px;
+        }
+        .sidebar {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            height: fit-content;
+            max-height: calc(100vh - 180px);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .upload-box {
+            border: 2px dashed var(--main-blue);
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .upload-box:hover {
+            background: var(--light-blue);
+        }
+        .upload-box input {
+            display: none;
+        }
+        .search-box input, .filter-box select {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            outline: none;
+            font-size: 13px;
+            height: 28px;
+        }
+        .monster-list {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            max-height: 350px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .monster-item {
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .monster-item:hover {
+            background: var(--light-blue);
+        }
+        .monster-item input {
+            cursor: pointer;
+        }
+        .list-btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: fit-content;
+        }
+        .btn-primary {
+            background: var(--main-blue);
+            color: var(--white);
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        .btn-default {
+            background: var(--gray);
+            color: var(--text-main);
+        }
+        .btn-default:hover {
+            background: var(--border);
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+        .btn-success {
+            background: var(--success);
+            color: var(--white);
+        }
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .config-panel {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 8px;
+        }
+        .config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .config-item label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .config-item input, .config-item select {
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            outline: none;
+            font-size: 13px;
+            height: 28px;
+        }
+        .config-item.checkbox {
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+        }
+        .level-slider {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .level-slider span {
+            min-width: 35px;
+            text-align: center;
+            font-size: 13px;
+        }
+        .level-slider input[type=range] {
+            flex: 1;
+            min-width: 80px;
+            height: 20px;
+        }
+        .main-role-panel {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--main-blue);
+        }
+        .role-attrs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+        }
+        .attr-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .attr-item label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .attr-item input {
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            outline: none;
+            font-size: 13px;
+            height: 28px;
+        }
+        .target-panel {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .target-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .target-btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: calc(100vh - 500px);
+            min-height: 200px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        thead {
+            background: var(--light-blue);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        th, td {
+            padding: 4px 3px;
+            text-align: center;
+            border: 1px solid var(--border);
+            min-width: 60px;
+        }
+        th {
+            font-weight: 600;
+            color: var(--main-blue);
+        }
+        tbody tr:hover {
+            background: var(--light-blue);
+        }
+        .speed-tag {
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .speed-fast {
+            background: var(--success);
+            color: var(--white);
+        }
+        .speed-slow {
+            background: var(--danger);
+            color: var(--white);
+        }
+        .speed-same {
+            background: var(--warning);
+            color: var(--white);
+        }
+        .damage-num {
+            font-weight: 600;
+            color: var(--main-blue);
+        }
+        .edit-field, .type-multi-input {
+            width: 100%;
+            min-width: 50px;
+            padding: 2px 4px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            font-size: 12px;
+            height: 24px;
+            box-sizing: border-box;
+        }
+        .ud-field, .ua-field {
+            width: 100%;
+            min-width: 50px;
+            padding: 2px 4px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            font-size: 12px;
+            height: 24px;
+            box-sizing: border-box;
+        }
+        .unknown-panel {
+            margin-top: 20px;
+            border-top: 2px solid var(--main-blue);
+            padding-top: 10px;
+        }
+        .unknown-table-wrapper {
+            overflow-x: auto;
+            max-height: 400px;
+            margin-top: 8px;
+        }
+        .calc-result {
+            font-weight: bold;
+            background-color: #eef6fc;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 900px;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            color: var(--main-blue);
+        }
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+        .close:hover {
+            color: #000;
+        }
+        .type-edit-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .type-edit-table th, .type-edit-table td {
+            border: 1px solid var(--border);
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .type-edit-table th {
+            background: var(--light-blue);
+            width: 20%;
+        }
+        .type-edit-table input {
+            width: 100%;
+            padding: 4px;
+            box-sizing: border-box;
+        }
+        .add-type-area {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid var(--main-blue);
+        }
+        .add-type-area input {
+            margin: 5px 0;
+            width: 100%;
+        }
+        .modal-buttons {
+            text-align: right;
+            margin-top: 20px;
+        }
+        .btn-warning {
+            background: var(--warning);
+            color: var(--white);
+        }
+        .delete-type-btn {
+            background: #f56c6c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+        .delete-type-btn:hover {
+            background: #ff4d4d;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>卡布西游伤害计算器</h1>
+    <div class="sub-header">
+        <span class="version" title="点击查看版本说明">V2.5</span>
+        <span class="author">作者：匿名卡布</span>
+        <button id="edit-type-btn" style="background: #ffc107; border: none; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-size: 14px;" title="自定义单属性克制关系。在系别名称处输入任意单属性关键字（如圣魔）即可实现双属性甚至多属性计算">编辑单属性克制</button>
+    </div>
+</div>
+
+<div class="tabs">
+    <div class="tab-item active" data-tab="attack" title="切换到攻击计算模式：以一个攻击者对抗多个防御者">攻击计算（1攻对多防）</div>
+    <div class="tab-item" data-tab="defend" title="切换到防御计算模式：以一个防御者对抗多个攻击者">防御计算（1防对多攻）</div>
+</div>
+
+<!-- 攻击计算标签页 -->
+<div class="tab-content active" id="attack-tab">
+    <div class="container">
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="upload-box" id="upload-attack" title="导入Excel配置表（支持.xlsx/.xls），表格包含备注、名称、图鉴编号、系别名称、能力、六维能力字段，增添或缺少非相关字段不影响使用">
+                    <label for="file-attack">点击导入妖怪配置.xlsx</label>
+                    <input type="file" id="file-attack" accept=".xlsx,.xls">
+                </div>
+                <div class="search-box">
+                    <input type="text" id="search-attack" placeholder="搜索妖怪名称/图鉴编号" title="输入名称或编号快速筛选">
+                </div>
+                <div class="filter-box">
+                    <select id="type-filter-attack" title="按系别筛选妖怪">
+                        <option value="">全部系别</option>
+                    </select>
+                </div>
+                <div class="monster-list" id="monster-list-attack"></div>
+                <div class="list-btn-group">
+                    <button class="btn btn-default" id="select-all-attack" title="勾选当前列表所有妖怪">全选</button>
+                    <button class="btn btn-default" id="unselect-all-attack" title="取消全部勾选">取消全选</button>
+                </div>
+                <button class="btn btn-primary" id="add-defender-btn" title="将左侧选中的妖怪批量添加到右侧防御者列表（作为挨打目标）">添加选中到防御方</button>
+                <button class="btn btn-primary" id="set-as-attacker" title="将左侧选中的妖怪数据一键填入上方「攻击者配置」面板">设为主角</button>
+            </div>
+
+            <div class="config-panel">
+                <div class="config-item" title="选择伤害计算公式：卡布简化版浮动约±7.5%，赛尔号公式浮动±15%，我也不太明白实际上是哪个，反正结果差不多">
+                    <label>计算公式</label>
+                    <select id="formula-attack">
+                        <option value="kaboo">卡布简化公式</option>
+                        <option value="seer">赛尔号公式</option>
+                    </select>
+                </div>
+                <div class="config-item" title="物理攻击结算目标「防御」；法术攻击结算目标「抗性」">
+                    <label>攻击类型</label>
+                    <select id="attack-type-attack">
+                        <option value="physic">物理攻击（对应防御）</option>
+                        <option value="magic">法术攻击（对应抗性）</option>
+                    </select>
+                </div>
+                <div class="config-item" title="技能的基础威力值，通常为大招160或先手70">
+                    <label>技能威力</label>
+                    <input type="number" id="power-attack" value="160" min="0">
+                </div>
+                <div class="config-item checkbox" title="若攻击者属性与技能属性相同，伤害提升1.5倍">
+                    <input type="checkbox" id="same-type-attack" checked>
+                    <label>本系修正（1.5倍）</label>
+                </div>
+                <div class="config-item" title="攻击等级改变攻击/法术能力倍率，范围-6~6级">
+                    <label>攻击等级</label>
+                    <div class="level-slider">
+                        <input type="range" id="atk-level-attack" min="-6" max="6" value="0">
+                        <span id="atk-level-display-attack">0</span>级
+                        <span id="atk-mult-display-attack">1.00x</span>
+                    </div>
+                    <input type="hidden" id="atk-buff-attack" value="1.0">
+                </div>
+                <div class="config-item" title="额外伤害倍率，例如技能威力翻倍、暴击、减伤、场地等，默认为1.0">
+                    <label>其他倍数</label>
+                    <input type="number" id="other-multi-attack" value="1.0" step="any" min="0">
+                </div>
+            </div>
+
+            <div class="main-role-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div class="panel-title">攻击者配置</div>
+                    <button class="btn btn-default" id="reset-attacker" style="padding:4px 10px;" title="将所有攻击者属性重置为默认值（体力420，攻击340等）">重置攻击者</button>
+                </div>
+                <div class="role-attrs">
+                    <div class="attr-item"><label>备注</label><input type="text" id="attacker-remark" placeholder="自定义"></div>
+                    <div class="attr-item"><label>妖怪名称</label><input type="text" id="attacker-name" placeholder="自定义"></div>
+                    <div class="attr-item"><label>图鉴编号</label><input type="number" id="attacker-id" placeholder="自定义"></div>
+                    <div class="attr-item"><label>系别名称</label><input type="text" id="attacker-type" placeholder="“系”字可不输"></div>
+                    <div class="attr-item"><label>体力能力</label><input type="number" id="attacker-hp" value="420" min="0"></div>
+                    <div class="attr-item"><label>攻击能力</label><input type="number" id="attacker-atk" value="340" min="0"></div>
+                    <div class="attr-item"><label>防御能力</label><input type="number" id="attacker-def" value="280" min="0"></div>
+                    <div class="attr-item"><label>法术能力</label><input type="number" id="attacker-magic" value="340" min="0"></div>
+                    <div class="attr-item"><label>抗性能力</label><input type="number" id="attacker-resist" value="280" min="0"></div>
+                    <div class="attr-item"><label>速度能力</label><input type="number" id="attacker-speed" value="276" min="0"></div>
+                </div>
+            </div>
+
+            <div class="target-panel">
+                <div class="target-header">
+                    <div class="panel-title">防御者列表</div>
+                    <div class="target-btn-group">
+                        <button class="btn btn-danger" id="delete-selected-defender" title="删除表格中已勾选的防御者">删除选中</button>
+                        <button class="btn btn-primary" id="new-defender" title="新建空白自定义防御者">新建防御者</button>
+                        <button class="btn btn-danger" id="clear-attack-page" title="清空本列表所有防御者">一键清除此页</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="defender-table">
+                        <thead>
+                            <tr><th><input type="checkbox" id="defender-check-all" title="全选/取消全选"></th><th>备注</th><th>名称</th><th>编号</th><th>系别</th><th>防御</th><th>抗性</th><th>防御等级</th><th>速度</th><th>速度对比</th><th>克制倍数</th><th>最低伤害</th><th>平均伤害</th><th>最高伤害</th></tr>
+                        </thead>
+                        <tbody id="defender-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 未知防御者计算区域 -->
+            <div class="unknown-panel" id="unknown-defender-panel" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="panel-title">未知防御者防抗计算列表</div>
+                    <div>
+                        <button class="btn btn-danger" id="delete-unknown-defender" title="删除表格中已勾选的未知防御者">删除选中</button>
+                        <button class="btn btn-primary" id="new-unknown-defender" title="新增一行，输入造成伤害反推防御/抗性值">新建未知防御者</button>
+                        <button class="btn btn-danger" id="clear-unknown-defender" title="清空所有未知防御者">一键清除此页</button>
+                    </div>
+                </div>
+                <div class="unknown-table-wrapper">
+                    <table id="unknown-defender-table">
+                        <thead>
+                            <tr><th><input type="checkbox" id="unknown-defender-check-all" title="全选/取消全选"></th><th>备注</th><th>名称</th><th>系别</th><th>克制倍数</th><th>己方攻击等级</th><th>对方防御等级</th><th>造成伤害</th><th>计算出的防御/抗性</th></tr>
+                        </thead>
+                        <tbody id="unknown-defender-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <button class="btn btn-default" id="toggle-unknown-defender" style="margin-top: 10px;" title="展开/隐藏反推面板，根据实际伤害反算防御者防御/抗性">计算防御者防抗</button>
+        </div>
+    </div>
+</div>
+
+<!-- 防御计算标签页 -->
+<div class="tab-content" id="defend-tab">
+    <div class="container">
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="upload-box" id="upload-defend" title="导入Excel配置表，复用妖怪数据库">
+                    <label for="file-defend">点击导入妖怪配置.xlsx</label>
+                    <input type="file" id="file-defend" accept=".xlsx,.xls">
+                </div>
+                <div class="search-box">
+                    <input type="text" id="search-defend" placeholder="搜索妖怪名称/图鉴编号" title="输入名称或编号快速筛选">
+                </div>
+                <div class="filter-box">
+                    <select id="type-filter-defend" title="按系别筛选妖怪">
+                        <option value="">全部系别</option>
+                    </select>
+                </div>
+                <div class="monster-list" id="monster-list-defend"></div>
+                <div class="list-btn-group">
+                    <button class="btn btn-default" id="select-all-defend" title="全选当前列表妖怪">全选</button>
+                    <button class="btn btn-default" id="unselect-all-defend" title="取消全部勾选">取消全选</button>
+                </div>
+                <button class="btn btn-primary" id="add-attacker-btn" title="将选中的妖怪添加到右侧攻击者列表（作为输出伤害方）">添加选中到攻击方</button>
+                <button class="btn btn-primary" id="set-as-defender" title="将选中的妖怪数据一键填入上方「防御者配置」面板">设为主角</button>
+            </div>
+
+            <div class="config-panel">
+                <div class="config-item" title="伤害公式选择，影响伤害浮动范围">
+                    <label>计算公式</label>
+                    <select id="formula-defend">
+                        <option value="kaboo">卡布简化公式</option>
+                        <option value="seer">赛尔号公式</option>
+                    </select>
+                </div>
+                <div class="config-item" title="防御等级影响防御/抗性能力倍率，范围-6~6级">
+                    <label>防御等级</label>
+                    <div class="level-slider">
+                        <input type="range" id="def-level-defend" min="-6" max="6" value="0">
+                        <span id="def-level-display-defend">0</span>级
+                        <span id="def-mult-display-defend">1.00x</span>
+                    </div>
+                    <input type="hidden" id="def-buff-defend" value="1.0">
+                </div>
+            </div>
+
+            <div class="main-role-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="panel-title">防御者配置</div>
+                    <button class="btn btn-default" id="reset-defender" style="padding:4px 10px;" title="重置防御者所有能力为默认值">重置防御者</button>
+                </div>
+                <div class="role-attrs">
+                    <div class="attr-item"><label>备注</label><input type="text" id="defender-remark" placeholder="自定义"></div>
+                    <div class="attr-item"><label>妖怪名称</label><input type="text" id="defender-name" placeholder="自定义"></div>
+                    <div class="attr-item"><label>图鉴编号</label><input type="number" id="defender-id" placeholder="自定义"></div>
+                    <div class="attr-item"><label>系别名称</label><input type="text" id="defender-type" placeholder="输木灵或灵木都行"></div>
+                    <div class="attr-item"><label>体力能力</label><input type="number" id="defender-hp" value="420" min="0"></div>
+                    <div class="attr-item"><label>攻击能力</label><input type="number" id="defender-atk" value="340" min="0"></div>
+                    <div class="attr-item"><label>防御能力</label><input type="number" id="defender-def" value="280" min="0"></div>
+                    <div class="attr-item"><label>法术能力</label><input type="number" id="defender-magic" value="340" min="0"></div>
+                    <div class="attr-item"><label>抗性能力</label><input type="number" id="defender-resist" value="280" min="0"></div>
+                    <div class="attr-item"><label>速度能力</label><input type="number" id="defender-speed" value="276" min="0"></div>
+                </div>
+            </div>
+
+            <div class="target-panel">
+                <div class="target-header">
+                    <div class="panel-title">攻击者列表</div>
+                    <div class="target-btn-group">
+                        <button class="btn btn-danger" id="delete-selected-attacker" title="删除表格中已勾选的攻击者">删除选中</button>
+                        <button class="btn btn-primary" id="new-attacker" title="新建空白自定义攻击者">新建攻击者</button>
+                        <button class="btn btn-danger" id="clear-defend-page" title="清空本列表所有攻击者">一键清除此页</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="attacker-table">
+                        <thead>
+                            <tr><th><input type="checkbox" id="attacker-check-all" title="全选/取消全选"></th><th>备注</th><th>名称</th><th>编号</th><th>系别</th><th>攻击</th><th>法术</th><th>速度</th><th>速度对比</th><th>攻击类型</th><th>技能威力</th><th>本系</th><th>攻击等级</th><th>其他倍数</th><th>克制倍数</th><th>最低伤害</th><th>平均伤害</th><th>最高伤害</th></tr>
+                        </thead>
+                        <tbody id="attacker-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 未知攻击者计算区域 -->
+            <div class="unknown-panel" id="unknown-attacker-panel" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="panel-title">未知攻击者攻法计算列表</div>
+                    <div>
+                        <button class="btn btn-danger" id="delete-unknown-attacker" title="删除表格中已勾选的未知攻击者">删除选中</button>
+                        <button class="btn btn-primary" id="new-unknown-attacker" title="新增一行，输入造成伤害反推攻击/法术值">新建未知攻击者</button>
+                        <button class="btn btn-danger" id="clear-unknown-attacker" title="清空所有未知攻击者">一键清除此页</button>
+                    </div>
+                </div>
+                <div class="unknown-table-wrapper">
+                    <table id="unknown-attacker-table">
+                        <thead>
+                            <tr><th><input type="checkbox" id="unknown-attacker-check-all" title="全选/取消全选"></th><th>备注</th><th>名称</th><th>系别</th><th>本系</th><th>克制倍数</th><th>攻击类型</th><th>技能威力</th><th>其他倍数</th><th>对方攻击等级</th><th>己方防御等级</th><th>造成伤害</th><th>计算出的攻击/法术</th></tr>
+                        </thead>
+                        <tbody id="unknown-attacker-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <button class="btn btn-default" id="toggle-unknown-attacker" style="margin-top: 10px;" title="展开/隐藏反推面板，根据实际伤害反算攻击者攻击/法术">计算攻击者攻法</button>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑属性克制关系的模态框 -->
+<div id="typeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>编辑单属性克制关系</h2>
+            <span class="close" title="关闭对话框">&times;</span>
+        </div>
+        <div id="typeEditArea"></div>
+        <div class="add-type-area">
+            <h3>添加新单属性</h3>
+            <input type="text" id="newTypeName" placeholder="新属性名（例如：没关系）">
+            <input type="text" id="newTypeResist" placeholder="克制列表（用英文逗号分隔，例如：金,木,水,火,土,妖,魔,幻）">
+            <input type="text" id="newTypeWeak" placeholder="被克制列表（同理。这里的克制是攻击克制，若A防御克制B，就在B处的被克制加上A）">
+            <button class="btn btn-primary" id="addNewTypeBtn" title="属性已被添加至属性相克表后才生效。如编辑”牛马“属性被”老板,资本“属性克制，”牛马“和”老板“已添加至克制表，”资本“没添加，那么牛马攻击老板被0.5克制，攻击资本还是1.0无克制。">添加新属性</button>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-success" id="saveTypeChanges" title="保存当前编辑的克制关系到本地存储，并立即生效">保存修改</button>
+            <button class="btn btn-warning" id="resetTypeToDefault" title="恢复为游戏内置的默认克制表，将丢失所有自定义修改">重置为默认</button>
+            <button class="btn btn-default" id="cancelTypeChanges" title="关闭窗口，不保存本次修改">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 默认克制表（原始数据）
+    const defaultTypeChart = {
+        火: { 克制: ['金','翼','幻','毒','机械','鬼'], 被克制: ['水','火','妖','灵','圣'] },
+        金: { 克制: ['木','怪','风','音'], 被克制: ['金','火','妖','圣'] },
+        木: { 克制: ['土','魔','雷','灵'], 被克制: ['金','木','翼','风','幻','冰','机械','圣'] },
+        水: { 克制: ['火','翼','毒','冰'], 被克制: ['水','土','怪','灵','圣','音'] },
+        土: { 克制: ['水','怪','幻','雷','毒'], 被克制: ['木','土','翼','冰','机械','圣'] },
+        翼: { 克制: ['金','土','风','灵','鬼'], 被克制: ['水','翼','雷','冰','机械','音'] },
+        怪: { 克制: ['木','魔','雷','鬼'], 被克制: ['土','妖','怪','幻'] },
+        魔: { 克制: ['火','妖','冰','圣','音'], 被克制: ['木','土','魔','雷','幻','鬼'] },
+        妖: { 克制: ['木','水','怪','机械','圣'], 被克制: ['妖','魔','毒','雷','幻','音'] },
+        风: { 克制: ['木','翼','冰'], 被克制: ['金','风','幻','机械','圣'] },
+        毒: { 克制: ['木','妖','风','音','鬼'], 被克制: ['水','火','土','毒','幻'] },
+        雷: { 克制: ['妖','魔','翼','幻'], 被克制: ['木','土','怪','雷','冰'] },
+        幻: { 克制: ['妖','毒','灵','圣'], 被克制: ['金','水','火','雷','幻','冰','音'] },
+        冰: { 克制: ['土','幻'], 被克制: ['水','妖','风','冰','机械','音'] },
+        灵: { 克制: ['水','火','魔','雷','机械'], 被克制: ['翼','毒','冰','灵','音'] },
+        机械: { 克制: ['土','冰','幻'], 被克制: ['水','火','雷','机械','圣'], 免疫: ['鬼'] },
+        圣: { 克制: ['金','木','水','火','土'], 被克制: ['妖','魔','幻','圣'] },
+        音: { 克制: ['妖','翼','幻','怪','冰'], 被克制: ['金','土','魔','毒','音','鬼'] },
+		鬼: { 克制: ['水','妖','魔','音'], 被克制: ['火','翼','幻','怪','鬼'] },
+    };
+
+    // 全局克制表（可从 localStorage 加载）
+    let typeChart = JSON.parse(JSON.stringify(defaultTypeChart));
+    let allTypes = Object.keys(typeChart);
+    const doubleTypes = ['机械'];  // 保留备用
+
+    let monsterData = [];
+    let defenderList = [];
+    let attackerList = [];
+    let unknownDefenders = [];
+    let unknownAttackers = [];
+
+    // 编辑时使用的临时副本
+    let editingTypeChart = JSON.parse(JSON.stringify(typeChart));
+    let editingAllTypes = [...allTypes];
+
+    // 持久化函数
+    function saveTypeChartToStorage() {
+        try {
+            localStorage.setItem('kabugTypeChart', JSON.stringify(typeChart));
+            localStorage.setItem('kabugAllTypes', JSON.stringify(allTypes));
+        } catch(e) { console.error('保存数据失败', e); }
+    }
+
+    function loadTypeChartFromStorage() {
+        try {
+            const storedChart = localStorage.getItem('kabugTypeChart');
+            const storedTypes = localStorage.getItem('kabugAllTypes');
+            if (storedChart && storedTypes) {
+                const parsedChart = JSON.parse(storedChart);
+                const parsedTypes = JSON.parse(storedTypes);
+                Object.keys(typeChart).forEach(key => delete typeChart[key]);
+                Object.assign(typeChart, parsedChart);
+                allTypes.length = 0;
+                allTypes.push(...parsedTypes);
+                return true;
+            }
+        } catch(e) { console.error('加载存储数据失败', e); }
+        return false;
+    }
+    // 页面启动时加载存储的克制表
+    loadTypeChartFromStorage();
+
+    // 通用工具函数
+    function escapeHtml(str) { return String(str).replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    // ================= 修复的关键函数：支持任意长度的系别拆分 =================
+    function splitType(typeName) {
+        if (!typeName) return [];
+        const pure = typeName.replace(/系$/, '');
+        const types = [];
+        let temp = pure;
+
+        // 从 allTypes 中分离多字属性（长度>1）和单字属性
+        const multiCharTypes = allTypes.filter(t => t.length > 1).sort((a, b) => b.length - a.length);
+        const singleCharTypes = allTypes.filter(t => t.length === 1);
+
+        // 优先匹配多字属性（避免“机械”被拆成“机”“械”）
+        for (let mt of multiCharTypes) {
+            if (temp.includes(mt)) {
+                types.push(mt);
+                temp = temp.replace(mt, '');
+            }
+        }
+        // 再匹配单字属性
+        for (let st of singleCharTypes) {
+            if (temp.includes(st)) {
+                types.push(st);
+                temp = temp.replace(st, '');
+            }
+        }
+        return types.slice(0, 2);
+    }
+    // ====================================================================
+
+    function getSingleTypeMulti(attackType, defendType) {
+		if (!attackType || !defendType) return 1.0;
+		const typeData = typeChart[attackType];
+		if (!typeData) return 1.0;
+		// 检查免疫
+		if (typeData.免疫 && typeData.免疫.includes(defendType)) return 0.0;
+		if (typeData.克制.includes(defendType)) return 2.0;
+		if (typeData.被克制.includes(defendType)) return 0.5;
+		return 1.0;
+	}
+    function calcTypeMulti(attackTypeStr, defendTypeStr, hasSameType) {
+        const attackTypes = splitType(attackTypeStr);
+        const defendTypes = splitType(defendTypeStr);
+        if (attackTypes.length===0 || defendTypes.length===0) return 1.0;
+        if (attackTypes.length===1) {
+            const atkType = attackTypes[0];
+            if (defendTypes.length===1) return getSingleTypeMulti(atkType, defendTypes[0]);
+            if (defendTypes.length===2) {
+                const m1 = getSingleTypeMulti(atkType, defendTypes[0]);
+                const m2 = getSingleTypeMulti(atkType, defendTypes[1]);
+                if (m1 > 1 && m2 > 1) return m1 * m2;
+                else return (m1 + m2) / 2;
+			}
+		}
+        if (attackTypes.length===2) {
+            const [a,b] = attackTypes;
+            if (defendTypes.length===1) {
+				const c = defendTypes[0];
+				const ac = getSingleTypeMulti(a,c), bc = getSingleTypeMulti(b,c);
+				if (ac > 1 && bc > 1) return ac * bc;
+				else return (ac + bc) / 2;
+			}
+            if (defendTypes.length===2) {
+                const [c,d] = defendTypes;
+                return (getSingleTypeMulti(a,c)+getSingleTypeMulti(a,d)+getSingleTypeMulti(b,c)+getSingleTypeMulti(b,d))/4;
+            }
+        }
+        return 1.0;
+    }
+    function getStatusMultiplier(level) {
+        level = parseInt(level)||0;
+        if (level>=0) return 1+0.5*level;
+        else return Math.pow(0.7931, Math.abs(level));
+    }
+    function calcDamage(params) {
+        const { formula, level=100, power, atkValue, defValue, atkBuff, defBuff, sameType, attackType, defendType, otherMulti, customTypeMulti } = params;
+        let typeMulti = (customTypeMulti && customTypeMulti>0) ? customTypeMulti : calcTypeMulti(attackType, defendType, sameType);
+        const sameTypeMulti = sameType ? 1.5 : 1.0;
+        const finalAtk = Math.floor(atkValue * atkBuff);
+        const finalDef = Math.floor(defValue * defBuff);
+        if (finalDef<=0) return { min:0, max:0 };
+        let baseDamage, minRandom, maxRandom;
+        if (formula==='seer') {
+            baseDamage = ((level*0.4+2)*power*finalAtk/finalDef/50)+2;
+            minRandom=0.85; maxRandom=1.0;
+        } else {
+            baseDamage = 2 + (power*finalAtk/finalDef*0.8);
+            minRandom=0.925; maxRandom=1.075;
+        }
+        const finalMulti = sameTypeMulti * typeMulti * otherMulti;
+        const minDamage = Math.floor(baseDamage*finalMulti*minRandom);
+        const maxDamage = Math.floor(baseDamage*finalMulti*maxRandom);
+        return { min: minDamage, max: maxDamage };
+    }
+    function calcDefenseFromDamage(params) {
+        const { formula, power, atkValue, atkBuff, defBuff, sameTypeMulti, typeMulti, otherMulti, expectedDamage } = params;
+        const totalMulti = sameTypeMulti * typeMulti * otherMulti;
+        let baseDamage = expectedDamage / totalMulti;
+        let defValue = null;
+        if (formula === 'seer') {
+            const level = 100;
+            const avgRandom = 0.925;
+            const baseBeforeRandom = baseDamage / avgRandom;
+            const term = (level*0.4+2)*power*atkValue*atkBuff/50;
+            if (baseBeforeRandom <= 2) return null;
+            defValue = term / (baseBeforeRandom-2);
+            defValue = defValue / defBuff;
+        } else {
+            if (baseDamage <= 2) return null;
+            const inner = baseDamage - 2;
+            defValue = (0.8 * power * atkValue * atkBuff) / (inner * defBuff);
+        }
+        return Math.floor(defValue);
+    }
+    function calcAttackFromDamage(params) {
+        const { formula, power, defValue, atkBuff, defBuff, sameTypeMulti, typeMulti, otherMulti, expectedDamage } = params;
+        const totalMulti = sameTypeMulti * typeMulti * otherMulti;
+        let baseDamage = expectedDamage / totalMulti;
+        let atkValue = null;
+        if (formula === 'seer') {
+            const level = 100;
+            const avgRandom = 0.925;
+            const baseBeforeRandom = baseDamage / avgRandom;
+            const term = (level*0.4+2)*power/50;
+            if (baseBeforeRandom <= 2) return null;
+            atkValue = (baseBeforeRandom-2)*defValue*defBuff / (term*atkBuff);
+        } else {
+            if (baseDamage <= 2) return null;
+            const inner = baseDamage - 2;
+            atkValue = (inner*defValue*defBuff) / (0.8*power*atkBuff);
+        }
+        return Math.floor(atkValue);
+    }
+
+    // 解析Excel
+    function parseExcel(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            callback(jsonData);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function renderMonsterList(tabType, searchKeyword='', typeFilter='') {
+        const listEl = document.getElementById(`monster-list-${tabType}`);
+        let filtered = [...monsterData];
+        if(searchKeyword) {
+            const kw = searchKeyword.toLowerCase();
+            filtered = filtered.filter(m => (m.名称&&m.名称.toLowerCase().includes(kw)) || (m.图鉴编号&&m.图鉴编号.toString().includes(kw)));
+        }
+        if(typeFilter) filtered = filtered.filter(m => m.系别名称===typeFilter);
+        listEl.innerHTML = '';
+        filtered.forEach(monster => {
+            const idx = monsterData.indexOf(monster);
+            const div = document.createElement('div');
+            div.className='monster-item';
+            div.innerHTML = `<input type="checkbox" id="monster-${tabType}-${idx}" data-index="${idx}"><label for="monster-${tabType}-${idx}">${monster.备注||''} ${monster.名称} [${monster.图鉴编号}] ${monster.系别名称}</label>`;
+            listEl.appendChild(div);
+        });
+    }
+    function updateTypeFilter() {
+        const types = new Set(monsterData.map(m=>m.系别名称).filter(Boolean));
+        const opts = '<option value="">全部系别</option>'+Array.from(types).map(t=>`<option value="${t}">${t}</option>`).join('');
+        document.getElementById('type-filter-attack').innerHTML = opts;
+        document.getElementById('type-filter-defend').innerHTML = opts;
+    }
+
+    // 渲染防御者列表
+    function renderDefenderTable() {
+        const tbody = document.getElementById('defender-tbody');
+        tbody.innerHTML = '';
+        const attacker = {
+            type: document.getElementById('attacker-type').value,
+            atk: Number(document.getElementById('attacker-atk').value),
+            magic: Number(document.getElementById('attacker-magic').value),
+            speed: Number(document.getElementById('attacker-speed').value)
+        };
+        const config = {
+            formula: document.getElementById('formula-attack').value,
+            attackType: document.getElementById('attack-type-attack').value,
+            power: Number(document.getElementById('power-attack').value),
+            sameType: document.getElementById('same-type-attack').checked,
+            atkBuff: Number(document.getElementById('atk-buff-attack').value),
+            otherMulti: Number(document.getElementById('other-multi-attack').value)
+        };
+        defenderList.forEach((def, idx) => {
+            const defLevel = (def.defLevel!==undefined) ? def.defLevel : 0;
+            const defBuff = getStatusMultiplier(defLevel);
+            const autoTypeMulti = calcTypeMulti(attacker.type, def.type, config.sameType);
+            const customMulti = (def.customTypeMulti!==undefined && def.customTypeMulti>0) ? def.customTypeMulti : autoTypeMulti;
+            const atkValue = config.attackType==='physic' ? attacker.atk : attacker.magic;
+            const defValue = config.attackType==='physic' ? def.def : def.resist;
+            const dmg = calcDamage({ ...config, atkValue, defValue, defBuff, attackType: attacker.type, defendType: def.type, customTypeMulti: customMulti });
+            const avg = Math.floor((dmg.min+dmg.max)/2);
+            let speedTag='', speedClass='';
+            if(attacker.speed > def.speed) { speedTag='快'; speedClass='speed-fast'; }
+            else if(attacker.speed < def.speed) { speedTag='慢'; speedClass='speed-slow'; }
+            else { speedTag='同速'; speedClass='speed-same'; }
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="checkbox" class="defender-check" data-index="${idx}"></td>
+                <td><input type="text" class="edit-field" data-field="remark" data-index="${idx}" value="${escapeHtml(def.remark||'')}"></td>
+                <td><input type="text" class="edit-field" data-field="name" data-index="${idx}" value="${escapeHtml(def.name||'')}"></td>
+                <td><input type="number" class="edit-field" data-field="id" data-index="${idx}" value="${def.id||''}"></td>
+                <td><input type="text" class="edit-field" data-field="type" data-index="${idx}" value="${escapeHtml(def.type||'')}"></td>
+                <td><input type="number" class="edit-field" data-field="def" data-index="${idx}" value="${def.def||0}" min="0"></td>
+                <td><input type="number" class="edit-field" data-field="resist" data-index="${idx}" value="${def.resist||0}" min="0"></td>
+                <td><input type="number" min="-6" max="6" class="edit-field" data-field="defLevel" data-index="${idx}" value="${defLevel}"></td>
+                <td><input type="number" class="edit-field" data-field="speed" data-index="${idx}" value="${def.speed||0}" min="0"></td>
+                <td><span class="speed-tag ${speedClass}">${speedTag}</span></td>
+                <td><input type="number" step="0.1" min="0" class="type-multi-input" data-index="${idx}" value="${customMulti.toFixed(3)}"></td>
+                <td class="damage-num">${dmg.min}</td>
+                <td class="damage-num" style="font-weight:bold; background:#e6f7ff;">${avg}</td>
+                <td class="damage-num">${dmg.max}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    // 渲染攻击者列表
+    function renderAttackerTable() {
+        const tbody = document.getElementById('attacker-tbody');
+        tbody.innerHTML = '';
+        const defender = {
+            type: document.getElementById('defender-type').value,
+            def: Number(document.getElementById('defender-def').value),
+            resist: Number(document.getElementById('defender-resist').value),
+            speed: Number(document.getElementById('defender-speed').value)
+        };
+        const config = {
+            formula: document.getElementById('formula-defend').value,
+            defBuff: Number(document.getElementById('def-buff-defend').value)
+        };
+        attackerList.forEach((att, idx) => {
+            const autoTypeMulti = calcTypeMulti(att.type, defender.type, att.sameType);
+            const customMulti = (att.customTypeMulti!==undefined && att.customTypeMulti>0) ? att.customTypeMulti : autoTypeMulti;
+            const atkValue = att.attackType==='physic' ? att.atk : att.magic;
+            const defValue = att.attackType==='physic' ? defender.def : defender.resist;
+            const atkBuff = getStatusMultiplier(att.atkLevel||0);
+            const dmg = calcDamage({
+                formula: config.formula, power: att.power, atkValue, defValue,
+                atkBuff, defBuff: config.defBuff, sameType: att.sameType,
+                attackType: att.type, defendType: defender.type,
+                otherMulti: att.otherMulti, customTypeMulti: customMulti
+            });
+            const avg = Math.floor((dmg.min+dmg.max)/2);
+            let speedTag='', speedClass='';
+            if(defender.speed > att.speed) { speedTag='快'; speedClass='speed-fast'; }
+            else if(defender.speed < att.speed) { speedTag='慢'; speedClass='speed-slow'; }
+            else { speedTag='同速'; speedClass='speed-same'; }
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="checkbox" class="attacker-check" data-index="${idx}"></td>
+                <td><input type="text" class="edit-field" data-field="remark" data-index="${idx}" value="${escapeHtml(att.remark||'')}"></td>
+                <td><input type="text" class="edit-field" data-field="name" data-index="${idx}" value="${escapeHtml(att.name||'')}"></td>
+                <td><input type="number" class="edit-field" data-field="id" data-index="${idx}" value="${att.id||''}"></td>
+                <td><input type="text" class="edit-field" data-field="type" data-index="${idx}" value="${escapeHtml(att.type||'')}"></td>
+                <td><input type="number" class="edit-field" data-field="atk" data-index="${idx}" value="${att.atk||0}" min="0"></td>
+                <td><input type="number" class="edit-field" data-field="magic" data-index="${idx}" value="${att.magic||0}" min="0"></td>
+                <td><input type="number" class="edit-field" data-field="speed" data-index="${idx}" value="${att.speed||0}" min="0"></td>
+                <td><span class="speed-tag ${speedClass}">${speedTag}</span></td>
+                <td><select class="edit-field" data-field="attackType" data-index="${idx}"><option value="physic" ${att.attackType==='physic'?'selected':''}>物理</option><option value="magic" ${att.attackType==='magic'?'selected':''}>法术</option></select></td>
+                <td><input type="number" class="edit-field" data-field="power" data-index="${idx}" value="${att.power||160}" min="0"></td>
+                <td><input type="checkbox" class="edit-field" data-field="sameType" data-index="${idx}" ${att.sameType?'checked':''} style="width:20px;height:20px;"></td>
+                <td><input type="number" class="edit-field" data-field="atkLevel" data-index="${idx}" value="${att.atkLevel||0}" min="-6" max="6"> (${getStatusMultiplier(att.atkLevel||0).toFixed(2)}x)</td>
+                <td><input type="number" class="edit-field" data-field="otherMulti" data-index="${idx}" value="${att.otherMulti||1.0}" step="any" min="0"></td>
+                <td><input type="number" step="0.1" min="0" class="type-multi-input" data-index="${idx}" value="${customMulti.toFixed(3)}"></td>
+                <td class="damage-num">${dmg.min}</td>
+                <td class="damage-num" style="font-weight:bold; background:#e6f7ff;">${avg}</td>
+                <td class="damage-num">${dmg.max}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 未知防御者渲染
+    function renderUnknownDefenderTable() {
+        const tbody = document.getElementById('unknown-defender-tbody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        const attacker = {
+            type: document.getElementById('attacker-type').value,
+            atk: Number(document.getElementById('attacker-atk').value),
+            magic: Number(document.getElementById('attacker-magic').value)
+        };
+        const attackType = document.getElementById('attack-type-attack').value;
+        const atkValue = attackType==='physic' ? attacker.atk : attacker.magic;
+        const power = Number(document.getElementById('power-attack').value);
+        const sameType = document.getElementById('same-type-attack').checked;
+        const sameTypeMulti = sameType ? 1.5 : 1.0;
+        const otherMulti = Number(document.getElementById('other-multi-attack').value);
+        const formula = document.getElementById('formula-attack').value;
+
+        unknownDefenders.forEach((item, idx) => {
+            let autoTypeMulti = 1.0;
+            if(item.type && attacker.type) autoTypeMulti = calcTypeMulti(attacker.type, item.type, sameType);
+            let typeMulti = (item.typeMulti!==undefined && item.typeMulti!==null && item.typeMulti!=='') ? parseFloat(item.typeMulti) : autoTypeMulti;
+            item.typeMulti = typeMulti;
+            const userAtkBuff = getStatusMultiplier(item.atkLevel||0);
+            const userDefBuff = getStatusMultiplier(item.defLevel||0);
+            const expDmg = Number(item.expectedDamage);
+            let calcVal = null;
+            if(expDmg && !isNaN(expDmg) && expDmg>0) {
+                calcVal = calcDefenseFromDamage({ formula, power, atkValue, atkBuff: userAtkBuff, defBuff: userDefBuff, sameTypeMulti, typeMulti, otherMulti, expectedDamage: expDmg });
+            }
+            const display = (calcVal!==null) ? calcVal : '—';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="checkbox" class="unknown-defender-chk" data-idx="${idx}"></td>
+                <td><input type="text" class="ud-field" data-field="remark" data-idx="${idx}" value="${escapeHtml(item.remark||'')}"></td>
+                <td><input type="text" class="ud-field" data-field="name" data-idx="${idx}" value="${escapeHtml(item.name||'')}"></td>
+                <td><input type="text" class="ud-field" data-field="type" data-idx="${idx}" value="${escapeHtml(item.type||'')}"></td>
+                <td><input type="number" step="0.1" class="ud-field" data-field="typeMulti" data-idx="${idx}" value="${typeMulti.toFixed(3)}"></td>
+                <td><input type="number" min="-6" max="6" class="ud-field" data-field="atkLevel" data-idx="${idx}" value="${item.atkLevel||0}"></td>
+                <td><input type="number" min="-6" max="6" class="ud-field" data-field="defLevel" data-idx="${idx}" value="${item.defLevel||0}"></td>
+                <td><input type="number" class="ud-field" data-field="expectedDamage" data-idx="${idx}" value="${item.expectedDamage||''}"></td>
+                <td class="calc-result">${display}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    // 未知攻击者渲染
+    function renderUnknownAttackerTable() {
+        const tbody = document.getElementById('unknown-attacker-tbody');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        const defender = {
+            type: document.getElementById('defender-type').value,
+            def: Number(document.getElementById('defender-def').value),
+            resist: Number(document.getElementById('defender-resist').value)
+        };
+        const defBuff = Number(document.getElementById('def-buff-defend').value);
+        const formula = document.getElementById('formula-defend').value;
+
+        unknownAttackers.forEach((item, idx) => {
+            let autoTypeMulti = 1.0;
+            if(item.type && defender.type) autoTypeMulti = calcTypeMulti(item.type, defender.type, item.sameType!==undefined ? item.sameType : true);
+            let typeMulti = (item.typeMulti!==undefined && item.typeMulti!==null && item.typeMulti!=='') ? parseFloat(item.typeMulti) : autoTypeMulti;
+            item.typeMulti = typeMulti;
+            const attackType = item.attackType || 'physic';
+            const defValue = attackType==='physic' ? defender.def : defender.resist;
+            const sameTypeMulti = (item.sameType!==undefined) ? (item.sameType?1.5:1.0) : 1.5;
+            const power = Number(item.power);
+            const otherMulti = Number(item.otherMulti);
+            const userAtkBuff = getStatusMultiplier(item.atkLevel||0);
+            const userDefBuff = getStatusMultiplier(item.defLevel||0);
+            const expDmg = Number(item.expectedDamage);
+            let calcVal = null;
+            if(expDmg && !isNaN(expDmg) && expDmg>0 && power>0) {
+                calcVal = calcAttackFromDamage({ formula, power, defValue, atkBuff: userAtkBuff, defBuff: userDefBuff, sameTypeMulti, typeMulti, otherMulti, expectedDamage: expDmg });
+            }
+            const display = (calcVal!==null) ? calcVal : '—';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="checkbox" class="unknown-attacker-chk" data-idx="${idx}"></td>
+                <td><input type="text" class="ua-field" data-field="remark" data-idx="${idx}" value="${escapeHtml(item.remark||'')}"></td>
+                <td><input type="text" class="ua-field" data-field="name" data-idx="${idx}" value="${escapeHtml(item.name||'')}"></td>
+                <td><input type="text" class="ua-field" data-field="type" data-idx="${idx}" value="${escapeHtml(item.type||'')}"></td>
+                <td><input type="checkbox" class="ua-field" data-field="sameType" data-idx="${idx}" ${item.sameType ? 'checked' : ''}></td>
+                <td><input type="number" step="0.1" class="ua-field" data-field="typeMulti" data-idx="${idx}" value="${typeMulti.toFixed(3)}"></td>
+                <td><select class="ua-field" data-field="attackType" data-idx="${idx}"><option value="physic" ${item.attackType==='physic'?'selected':''}>物理</option><option value="magic" ${item.attackType==='magic'?'selected':''}>法术</option></select></td>
+                <td><input type="number" class="ua-field" data-field="power" data-idx="${idx}" value="${item.power||160}"></td>
+                <td><input type="number" step="any" class="ua-field" data-field="otherMulti" data-idx="${idx}" value="${item.otherMulti||1.0}"></td>
+                <td><input type="number" min="-6" max="6" class="ua-field" data-field="atkLevel" data-idx="${idx}" value="${item.atkLevel||0}"></td>
+                <td><input type="number" min="-6" max="6" class="ua-field" data-field="defLevel" data-idx="${idx}" value="${item.defLevel||0}"></td>
+                <td><input type="number" class="ua-field" data-field="expectedDamage" data-idx="${idx}" value="${item.expectedDamage||''}"></td>
+                <td class="calc-result">${display}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 滑块初始化
+    function initLevelSlider(sliderId, displayId, multDisplayId, hiddenId) {
+        const slider = document.getElementById(sliderId);
+        const display = document.getElementById(displayId);
+        const multDisplay = document.getElementById(multDisplayId);
+        const hidden = document.getElementById(hiddenId);
+        function update() {
+            const level = parseInt(slider.value);
+            display.textContent = level;
+            const mult = getStatusMultiplier(level);
+            multDisplay.textContent = mult.toFixed(3)+'x';
+            hidden.value = mult.toFixed(3);
+            if(document.getElementById('attack-tab').classList.contains('active')) renderDefenderTable();
+            else renderAttackerTable();
+        }
+        slider.addEventListener('input', update);
+        update();
+    }
+
+    // 重置
+    function resetAttackerConfig() {
+        document.getElementById('attacker-remark').value = '';
+        document.getElementById('attacker-name').value = '';
+        document.getElementById('attacker-id').value = '';
+        document.getElementById('attacker-type').value = '';
+        document.getElementById('attacker-hp').value = 420;
+        document.getElementById('attacker-atk').value = 340;
+        document.getElementById('attacker-def').value = 280;
+        document.getElementById('attacker-magic').value = 340;
+        document.getElementById('attacker-resist').value = 280;
+        document.getElementById('attacker-speed').value = 276;
+        renderDefenderTable();
+    }
+    function resetDefenderConfig() {
+        document.getElementById('defender-remark').value = '';
+        document.getElementById('defender-name').value = '';
+        document.getElementById('defender-id').value = '';
+        document.getElementById('defender-type').value = '';
+        document.getElementById('defender-hp').value = 420;
+        document.getElementById('defender-atk').value = 340;
+        document.getElementById('defender-def').value = 280;
+        document.getElementById('defender-magic').value = 340;
+        document.getElementById('defender-resist').value = 280;
+        document.getElementById('defender-speed').value = 276;
+        renderAttackerTable();
+    }
+
+    // 属性编辑器相关函数
+    function refreshTypeEditorTable() {
+        const container = document.getElementById('typeEditArea');
+        if (!container) return;
+        const table = document.createElement('table');
+        table.className = 'type-edit-table';
+        table.innerHTML = `<thead><tr><th>属性名</th><th>克制（用逗号分隔）</th><th>被克制（用逗号分隔）</th><th>操作</th></tr></thead><tbody></tbody>`;
+        const tbody = table.querySelector('tbody');
+        for (let type of editingAllTypes) {
+            const data = editingTypeChart[type];
+            const resistStr = (data.克制 || []).join(',');
+            const weakStr = (data.被克制 || []).join(',');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${escapeHtml(type)}</strong></td>
+                <td><input type="text" data-type="${type}" data-field="resist" value="${escapeHtml(resistStr)}" placeholder="例：金,木,水"></td>
+                <td><input type="text" data-type="${type}" data-field="weak" value="${escapeHtml(weakStr)}" placeholder="例：圣,雷,音"></td>
+                <td><button class="delete-type-btn" data-type="${type}" style="background:#f56c6c; color:white; border:none; border-radius:4px; padding:4px 8px; cursor:pointer;" title="删除此属性及其所有克制关系">删除</button></td>
+            `;
+            tbody.appendChild(row);
+        }
+        // 绑定输入变化
+        tbody.querySelectorAll('input[data-type]').forEach(input => {
+            input.addEventListener('change', function() {
+                const type = this.dataset.type;
+                const field = this.dataset.field;
+                let value = this.value.trim();
+                let arr = value ? value.split(/[,，]+/).map(s => s.trim()).filter(s => s) : [];
+                if (field === 'resist') {
+                    editingTypeChart[type].克制 = arr;
+                } else if (field === 'weak') {
+                    editingTypeChart[type].被克制 = arr;
+                }
+            });
+        });
+        // 绑定删除按钮
+        tbody.querySelectorAll('.delete-type-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const typeToDelete = this.dataset.type;
+                if (confirm(`确定要删除属性“${typeToDelete}”吗？`)) {
+                    const idx = editingAllTypes.indexOf(typeToDelete);
+                    if (idx !== -1) editingAllTypes.splice(idx, 1);
+                    delete editingTypeChart[typeToDelete];
+                    refreshTypeEditorTable();
+                }
+            });
+        });
+        container.innerHTML = '';
+        container.appendChild(table);
+    }
+
+    function openTypeEditor() {
+        const modal = document.getElementById('typeModal');
+        if (!modal) {
+            console.error('找不到模态框元素 #typeModal');
+            return;
+        }
+        editingTypeChart = JSON.parse(JSON.stringify(typeChart));
+        editingAllTypes = [...allTypes];
+        refreshTypeEditorTable();
+        modal.style.display = 'block';
+    }
+
+    function saveTypeChanges() {
+        const inputs = document.querySelectorAll('#typeEditArea input[data-type]');
+        inputs.forEach(input => {
+            const type = input.dataset.type;
+            const field = input.dataset.field;
+            let value = input.value.trim();
+            let arr = value ? value.split(/[,，]+/).map(s => s.trim()).filter(s => s) : [];
+            if (field === 'resist') {
+                if (editingTypeChart[type]) editingTypeChart[type].克制 = arr;
+            } else if (field === 'weak') {
+                if (editingTypeChart[type]) editingTypeChart[type].被克制 = arr;
+            }
+        });
+        Object.keys(typeChart).forEach(key => delete typeChart[key]);
+        Object.assign(typeChart, editingTypeChart);
+        allTypes.length = 0;
+        allTypes.push(...editingAllTypes);
+        saveTypeChartToStorage();
+        const modal = document.getElementById('typeModal');
+        if (modal) modal.style.display = 'none';
+        if (document.getElementById('attack-tab').classList.contains('active')) {
+            renderDefenderTable();
+            renderUnknownDefenderTable();
+        } else {
+            renderAttackerTable();
+            renderUnknownAttackerTable();
+        }
+        if (unknownDefenders.length) renderUnknownDefenderTable();
+        if (unknownAttackers.length) renderUnknownAttackerTable();
+        alert('属性克制关系已保存');
+    }
+
+    function resetTypeToDefault() {
+        if (confirm('重置将丢失所有自定义修改，恢复为默认克制表。确定吗？')) {
+            Object.keys(typeChart).forEach(key => delete typeChart[key]);
+            Object.assign(typeChart, JSON.parse(JSON.stringify(defaultTypeChart)));
+            allTypes.length = 0;
+            allTypes.push(...Object.keys(defaultTypeChart));
+            saveTypeChartToStorage();
+            if (document.getElementById('attack-tab').classList.contains('active')) {
+                renderDefenderTable();
+                renderUnknownDefenderTable();
+            } else {
+                renderAttackerTable();
+                renderUnknownAttackerTable();
+            }
+            const modal = document.getElementById('typeModal');
+            if (modal) modal.style.display = 'none';
+            alert('已重置为默认克制表');
+        }
+    }
+
+    // 页面启动后的主要事件绑定
+    window.onload = function() {
+        // 标签切换
+        document.querySelectorAll('.tab-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const tab = this.dataset.tab;
+                document.querySelectorAll('.tab-item').forEach(i=>i.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById(`${tab}-tab`).classList.add('active');
+            });
+        });
+        // 导入
+        document.getElementById('file-attack').addEventListener('change', e=>{
+            if(e.target.files[0]) parseExcel(e.target.files[0], data=>{ monsterData=data; updateTypeFilter(); renderMonsterList('attack'); alert(`导入 ${data.length} 条`); });
+        });
+        document.getElementById('file-defend').addEventListener('change', e=>{
+            if(e.target.files[0]) parseExcel(e.target.files[0], data=>{ monsterData=data; updateTypeFilter(); renderMonsterList('defend'); alert(`导入 ${data.length} 条`); });
+        });
+        // 搜索筛选
+        document.getElementById('search-attack').addEventListener('input', function(){ renderMonsterList('attack', this.value, document.getElementById('type-filter-attack').value); });
+        document.getElementById('type-filter-attack').addEventListener('change', function(){ renderMonsterList('attack', document.getElementById('search-attack').value, this.value); });
+        document.getElementById('search-defend').addEventListener('input', function(){ renderMonsterList('defend', this.value, document.getElementById('type-filter-defend').value); });
+        document.getElementById('type-filter-defend').addEventListener('change', function(){ renderMonsterList('defend', document.getElementById('search-defend').value, this.value); });
+        // 全选取消
+        document.getElementById('select-all-attack').addEventListener('click', ()=>document.querySelectorAll('#monster-list-attack input').forEach(c=>c.checked=true));
+        document.getElementById('unselect-all-attack').addEventListener('click', ()=>document.querySelectorAll('#monster-list-attack input').forEach(c=>c.checked=false));
+        document.getElementById('select-all-defend').addEventListener('click', ()=>document.querySelectorAll('#monster-list-defend input').forEach(c=>c.checked=true));
+        document.getElementById('unselect-all-defend').addEventListener('click', ()=>document.querySelectorAll('#monster-list-defend input').forEach(c=>c.checked=false));
+        // 添加防御者/攻击者
+        document.getElementById('add-defender-btn').addEventListener('click', ()=>{
+            const checks = document.querySelectorAll('#monster-list-attack input:checked');
+            if(!checks.length) { alert('请选择妖怪'); return; }
+            checks.forEach(cb=>{
+                const m = monsterData[cb.dataset.index];
+                defenderList.push({ remark:m.备注||'', name:m.名称||'', id:m.图鉴编号||'', type:m.系别名称||'', def:m.防御能力||0, resist:m.抗性能力||0, speed:m.速度能力||0, defLevel:0 });
+            });
+            renderDefenderTable();
+            alert(`添加 ${checks.length} 个防御者`);
+        });
+        document.getElementById('add-attacker-btn').addEventListener('click', ()=>{
+            const checks = document.querySelectorAll('#monster-list-defend input:checked');
+            if(!checks.length) { alert('请选择妖怪'); return; }
+            checks.forEach(cb=>{
+                const m = monsterData[cb.dataset.index];
+                attackerList.push({ remark:m.备注||'', name:m.名称||'', id:m.图鉴编号||'', type:m.系别名称||'', atk:m.攻击能力||0, magic:m.法术能力||0, speed:m.速度能力||0, attackType:'physic', power:160, sameType:true, atkLevel:0, otherMulti:1.0 });
+            });
+            renderAttackerTable();
+            alert(`添加 ${checks.length} 个攻击者`);
+        });
+        // 新建删除等
+        document.getElementById('new-defender').addEventListener('click', ()=>{ defenderList.push({ remark:'自定义', name:'自定义妖怪', id:'', type:'', def:280, resist:280, speed:276, defLevel:0 }); renderDefenderTable(); });
+        document.getElementById('new-attacker').addEventListener('click', ()=>{ attackerList.push({ remark:'自定义', name:'自定义妖怪', id:'', type:'', atk:340, magic:340, speed:276, attackType:'physic', power:160, sameType:true, atkLevel:0, otherMulti:1.0 }); renderAttackerTable(); });
+        document.getElementById('delete-selected-defender').addEventListener('click', ()=>{
+            const indices = Array.from(document.querySelectorAll('.defender-check:checked')).map(c=>parseInt(c.dataset.index)).sort((a,b)=>b-a);
+            if(!indices.length) { alert('请勾选要删除的防御者'); return; }
+            indices.forEach(i=>defenderList.splice(i,1));
+            renderDefenderTable();
+        });
+        document.getElementById('delete-selected-attacker').addEventListener('click', ()=>{
+            const indices = Array.from(document.querySelectorAll('.attacker-check:checked')).map(c=>parseInt(c.dataset.index)).sort((a,b)=>b-a);
+            if(!indices.length) { alert('请勾选要删除的攻击者'); return; }
+            indices.forEach(i=>attackerList.splice(i,1));
+            renderAttackerTable();
+        });
+        document.getElementById('defender-check-all').addEventListener('change', e=>document.querySelectorAll('.defender-check').forEach(c=>c.checked=e.target.checked));
+        document.getElementById('attacker-check-all').addEventListener('change', e=>document.querySelectorAll('.attacker-check').forEach(c=>c.checked=e.target.checked));
+        document.getElementById('clear-attack-page').addEventListener('click', ()=>{ if(confirm('清空防御者列表？')){ defenderList=[]; renderDefenderTable(); } });
+        document.getElementById('clear-defend-page').addEventListener('click', ()=>{ if(confirm('清空攻击者列表？')){ attackerList=[]; renderAttackerTable(); } });
+        document.getElementById('set-as-attacker').addEventListener('click', ()=>{
+            const chk = document.querySelector('#monster-list-attack input:checked');
+            if(!chk) { alert('请选择一个妖怪'); return; }
+            const m = monsterData[chk.dataset.index];
+            if(m){
+                document.getElementById('attacker-remark').value = m.备注||'';
+                document.getElementById('attacker-name').value = m.名称||'';
+                document.getElementById('attacker-id').value = m.图鉴编号||'';
+                document.getElementById('attacker-type').value = m.系别名称||'';
+                document.getElementById('attacker-hp').value = m.体力能力||420;
+                document.getElementById('attacker-atk').value = m.攻击能力||340;
+                document.getElementById('attacker-def').value = m.防御能力||280;
+                document.getElementById('attacker-magic').value = m.法术能力||340;
+                document.getElementById('attacker-resist').value = m.抗性能力||280;
+                document.getElementById('attacker-speed').value = m.速度能力||276;
+                renderDefenderTable();
+            }
+        });
+        document.getElementById('set-as-defender').addEventListener('click', ()=>{
+            const chk = document.querySelector('#monster-list-defend input:checked');
+            if(!chk) { alert('请选择一个妖怪'); return; }
+            const m = monsterData[chk.dataset.index];
+            if(m){
+                document.getElementById('defender-remark').value = m.备注||'';
+                document.getElementById('defender-name').value = m.名称||'';
+                document.getElementById('defender-id').value = m.图鉴编号||'';
+                document.getElementById('defender-type').value = m.系别名称||'';
+                document.getElementById('defender-hp').value = m.体力能力||420;
+                document.getElementById('defender-atk').value = m.攻击能力||340;
+                document.getElementById('defender-def').value = m.防御能力||280;
+                document.getElementById('defender-magic').value = m.法术能力||340;
+                document.getElementById('defender-resist').value = m.抗性能力||280;
+                document.getElementById('defender-speed').value = m.速度能力||276;
+                renderAttackerTable();
+            }
+        });
+        // 表格编辑委托
+        document.getElementById('defender-table').addEventListener('change', function(e){
+            const t = e.target;
+            if(t.classList.contains('edit-field') || t.classList.contains('type-multi-input')){
+                const idx = parseInt(t.dataset.index);
+                if(isNaN(idx)) return;
+                if(t.classList.contains('type-multi-input')){
+                    const v = parseFloat(t.value);
+                    defenderList[idx].customTypeMulti = (isNaN(v)||v<=0)?undefined:v;
+                } else {
+                    const field = t.dataset.field;
+                    let val = t.value;
+                    if(['def','resist','speed','id','defLevel'].includes(field)) val = val===''?0:Number(val);
+                    defenderList[idx][field] = val;
+                }
+                renderDefenderTable();
+            }
+        });
+        document.getElementById('attacker-table').addEventListener('change', function(e){
+            const t = e.target;
+            if(t.classList.contains('edit-field') || t.classList.contains('type-multi-input')){
+                const idx = parseInt(t.dataset.index);
+                if(isNaN(idx)) return;
+                if(t.classList.contains('type-multi-input')){
+                    const v = parseFloat(t.value);
+                    attackerList[idx].customTypeMulti = (isNaN(v)||v<=0)?undefined:v;
+                } else {
+                    const field = t.dataset.field;
+                    let val = t.type==='checkbox' ? t.checked : t.value;
+                    if(['atk','magic','speed','id','power','atkLevel','otherMulti'].includes(field)) val = val===''?0:Number(val);
+                    attackerList[idx][field] = val;
+                }
+                renderAttackerTable();
+            }
+        });
+        // 全局输入刷新
+        const allInputs = document.querySelectorAll('.config-panel input, .config-panel select, .role-attrs input');
+        allInputs.forEach(inp=>{
+            inp.addEventListener('input', ()=>{ if(document.getElementById('attack-tab').classList.contains('active')) renderDefenderTable(); else renderAttackerTable(); });
+            inp.addEventListener('change', ()=>{ if(document.getElementById('attack-tab').classList.contains('active')) renderDefenderTable(); else renderAttackerTable(); });
+        });
+        // 滑动条
+        initLevelSlider('atk-level-attack','atk-level-display-attack','atk-mult-display-attack','atk-buff-attack');
+        initLevelSlider('def-level-defend','def-level-display-defend','def-mult-display-defend','def-buff-defend');
+        // 重置
+        document.getElementById('reset-attacker').addEventListener('click', resetAttackerConfig);
+        document.getElementById('reset-defender').addEventListener('click', resetDefenderConfig);
+        // 未知防御者面板
+        const unknownDefPanel = document.getElementById('unknown-defender-panel');
+        document.getElementById('toggle-unknown-defender').addEventListener('click', ()=>{
+            if(unknownDefPanel.style.display==='none'){ unknownDefPanel.style.display='block'; renderUnknownDefenderTable(); }
+            else unknownDefPanel.style.display='none';
+        });
+        document.getElementById('new-unknown-defender').addEventListener('click', ()=>{
+            const defAtkLevel = parseInt(document.getElementById('atk-level-attack').value)||0;
+            unknownDefenders.push({ remark:'', name:'', type:'', typeMulti:1.0, atkLevel:defAtkLevel, defLevel:0, expectedDamage:'' });
+            renderUnknownDefenderTable();
+        });
+        document.getElementById('delete-unknown-defender').addEventListener('click', ()=>{
+            const idxs = Array.from(document.querySelectorAll('.unknown-defender-chk:checked')).map(c=>parseInt(c.dataset.idx)).sort((a,b)=>b-a);
+            if(!idxs.length) { alert('请勾选要删除的未知防御者'); return; }
+            idxs.forEach(i=>unknownDefenders.splice(i,1));
+            renderUnknownDefenderTable();
+        });
+        document.getElementById('clear-unknown-defender').addEventListener('click', ()=>{ if(confirm('清空所有未知防御者？')){ unknownDefenders=[]; renderUnknownDefenderTable(); } });
+        document.getElementById('unknown-defender-check-all').addEventListener('change', e=>document.querySelectorAll('.unknown-defender-chk').forEach(c=>c.checked=e.target.checked));
+        document.getElementById('unknown-defender-table').addEventListener('change', e=>{
+            const t = e.target;
+            if(t.classList.contains('ud-field')){
+                const idx = parseInt(t.dataset.idx);
+                const field = t.dataset.field;
+                let val = t.value;
+                if(['typeMulti','atkLevel','defLevel','expectedDamage'].includes(field)) val = parseFloat(val);
+                if(unknownDefenders[idx]) unknownDefenders[idx][field] = val;
+                if (field === 'type') {
+                    const attackerType = document.getElementById('attacker-type').value;
+                    const sameTypeChecked = document.getElementById('same-type-attack').checked;
+                    const newMulti = calcTypeMulti(attackerType, val, sameTypeChecked);
+                    unknownDefenders[idx].typeMulti = newMulti;
+                }
+                renderUnknownDefenderTable();
+            }
+        });
+        document.querySelectorAll('#formula-attack, #attack-type-attack, #power-attack, #same-type-attack, #other-multi-attack, #attacker-atk, #attacker-magic, #attacker-type').forEach(el=>{
+            el.addEventListener('input', ()=>renderUnknownDefenderTable());
+            el.addEventListener('change', ()=>renderUnknownDefenderTable());
+        });
+        // 未知攻击者面板
+        const unknownAttPanel = document.getElementById('unknown-attacker-panel');
+        document.getElementById('toggle-unknown-attacker').addEventListener('click', ()=>{
+            if(unknownAttPanel.style.display==='none'){ unknownAttPanel.style.display='block'; renderUnknownAttackerTable(); }
+            else unknownAttPanel.style.display='none';
+        });
+        document.getElementById('new-unknown-attacker').addEventListener('click', ()=>{
+            const defDefLevel = parseInt(document.getElementById('def-level-defend').value)||0;
+            unknownAttackers.push({ remark:'', name:'', type:'', typeMulti:1.0, attackType:'physic', power:160, otherMulti:1.0, atkLevel:0, defLevel:defDefLevel, sameType:true, expectedDamage:'' });
+            renderUnknownAttackerTable();
+        });
+        document.getElementById('delete-unknown-attacker').addEventListener('click', ()=>{
+            const idxs = Array.from(document.querySelectorAll('.unknown-attacker-chk:checked')).map(c=>parseInt(c.dataset.idx)).sort((a,b)=>b-a);
+            if(!idxs.length) { alert('请勾选要删除的未知攻击者'); return; }
+            idxs.forEach(i=>unknownAttackers.splice(i,1));
+            renderUnknownAttackerTable();
+        });
+        document.getElementById('clear-unknown-attacker').addEventListener('click', ()=>{ if(confirm('清空所有未知攻击者？')){ unknownAttackers=[]; renderUnknownAttackerTable(); } });
+        document.getElementById('unknown-attacker-check-all').addEventListener('change', e=>document.querySelectorAll('.unknown-attacker-chk').forEach(c=>c.checked=e.target.checked));
+        document.getElementById('unknown-attacker-table').addEventListener('change', e=>{
+            const t = e.target;
+            if(t.classList.contains('ua-field')){
+                const idx = parseInt(t.dataset.idx);
+                const field = t.dataset.field;
+                let val = t.type==='checkbox' ? t.checked : t.value;
+                if(['typeMulti','power','otherMulti','atkLevel','defLevel','expectedDamage'].includes(field)) val = parseFloat(val);
+                if(unknownAttackers[idx]) unknownAttackers[idx][field] = val;
+                if (field === 'type' || field === 'sameType') {
+                    const defenderType = document.getElementById('defender-type').value;
+                    const attackerType = unknownAttackers[idx].type || '';
+                    const sameType = unknownAttackers[idx].sameType !== undefined ? unknownAttackers[idx].sameType : true;
+                    if (attackerType && defenderType) {
+                        const newMulti = calcTypeMulti(attackerType, defenderType, sameType);
+                        unknownAttackers[idx].typeMulti = newMulti;
+                    }
+                }
+                renderUnknownAttackerTable();
+            }
+        });
+        document.querySelectorAll('#formula-defend, #def-level-defend, #defender-def, #defender-resist, #defender-type').forEach(el=>{
+            el.addEventListener('input', ()=>renderUnknownAttackerTable());
+            el.addEventListener('change', ()=>renderUnknownAttackerTable());
+        });
+        // 版本点击
+        const versionSpan = document.querySelector('.version');
+        if(versionSpan){
+            versionSpan.addEventListener('click', ()=>alert('本计算器搭配【卡布西游自定义种族值计算器】1.7以上版本和【妖怪顶级配置参考表格】使用。伤害计算器V1.0我发布过，不过与2.0版本大不一样。2.1版本修复了其他倍数的小问题。V2.2：区域优化；修复了音系计算异常问题；新增未知能力值反推功能。V2.3:可自定义单属性。V2.4：添加了悬停光标的使用注释，希望大家都能搞懂功能使用。V2.5：修复了数个功能BUG与错误，新添加了鬼系。卡布西游官方属性相克表：https://news.4399.com/gonglue/kabuxiyou/xk/'));
+        }
+
+        // 属性编辑器模态框相关
+        const editBtn = document.getElementById('edit-type-btn');
+        const closeSpan = document.querySelector('.close');
+        const cancelBtn = document.getElementById('cancelTypeChanges');
+        const saveBtn = document.getElementById('saveTypeChanges');
+        const resetBtn = document.getElementById('resetTypeToDefault');
+        const addNewTypeBtn = document.getElementById('addNewTypeBtn');
+
+        if (editBtn) editBtn.addEventListener('click', openTypeEditor);
+        if (closeSpan) closeSpan.addEventListener('click', () => {
+            const modal = document.getElementById('typeModal');
+            if (modal) modal.style.display = 'none';
+        });
+        if (cancelBtn) cancelBtn.addEventListener('click', () => {
+            const modal = document.getElementById('typeModal');
+            if (modal) modal.style.display = 'none';
+        });
+        if (saveBtn) saveBtn.addEventListener('click', saveTypeChanges);
+        if (resetBtn) resetBtn.addEventListener('click', resetTypeToDefault);
+
+        if (addNewTypeBtn) {
+            addNewTypeBtn.addEventListener('click', () => {
+                const newName = document.getElementById('newTypeName').value.trim();
+                const resistRaw = document.getElementById('newTypeResist').value.trim();
+                const weakRaw = document.getElementById('newTypeWeak').value.trim();
+                if (!newName) {
+                    alert('请输入新属性名');
+                    return;
+                }
+                if (editingAllTypes.includes(newName)) {
+                    alert('该属性已存在，不能重复添加');
+                    return;
+                }
+                const resistList = resistRaw ? resistRaw.split(/[,，]+/).map(s => s.trim()).filter(s => s) : [];
+                const weakList = weakRaw ? weakRaw.split(/[,，]+/).map(s => s.trim()).filter(s => s) : [];
+                editingTypeChart[newName] = { 克制: resistList, 被克制: weakList };
+                editingAllTypes.push(newName);
+                document.getElementById('newTypeName').value = '';
+                document.getElementById('newTypeResist').value = '';
+                document.getElementById('newTypeWeak').value = '';
+                refreshTypeEditorTable();
+            });
+        }
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('typeModal');
+            if (e.target === modal && modal) modal.style.display = 'none';
+        });
+    };
+</script>
+</body>
+</html>
